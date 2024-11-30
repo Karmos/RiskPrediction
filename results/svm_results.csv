@@ -1,0 +1,3 @@
+param_C,param_kernel,mean_test_score,std_test_score,rank_test_score,is_best_model
+1,linear,0.7664338950206687,0.002887356031366952,2,False
+1,rbf,0.8568692073305995,0.0041524640575943995,1,True
