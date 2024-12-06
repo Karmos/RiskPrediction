@@ -1,39 +1,14 @@
 import numpy as np
+import pandas as pd
+import os
 import pickle
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
+import shap
 
 
-def save_model(model, filename):
-    filename = './models'+'/'+filename
-    try:
-        with open(filename, 'wb') as file:
-            pickle.dump(model, file)
-        print(f"Modello salvato con successo in: {filename}")
-    except Exception as e:
-        print(f"Errore nel salvataggio del modello: {e}")
-
-#%%
-def save_grid_search_results(results, columns_to_save, filename):
-    filename = './results'+'/'+filename
-
-    # Seleziona le colonne principali per il CSV
-    results_to_save = results[columns_to_save].copy()
-
-    # Identifica il miglior modello basato su mean_test_score
-    best_index = results['mean_test_score'].idxmax()  # Indice del miglior punteggio medio
-
-    # Aggiungi una colonna che indica se il modello è il migliore
-    results_to_save['is_best_model'] = False
-    results_to_save.loc[best_index, 'is_best_model'] = True
-
-
-    # Salva i risultati in un file CSV
-    results_to_save.to_csv(filename, index=False)
-    print(f"Risultati salvati con successo in: {filename}")
-#%%
-def plot_confusion_matrix(y_true, y_pred):
+def plot_confusion_matrix(y_true, y_pred, model_name):
     # Calcola la matrice di confusione
     cm = confusion_matrix(y_true, y_pred)
 
@@ -47,26 +22,77 @@ def plot_confusion_matrix(y_true, y_pred):
     plt.xlabel('Predicted Labels', fontsize=12)
     plt.ylabel('True Labels', fontsize=12)
 
+    folder = 'images'
+    if not os.path.exists(folder):  # Se la cartella non esiste, la crea
+        os.makedirs(folder)
+
+    filename = 'confusion_matrix' + model_name + '.png'
+
+    path = os.path.join(folder, filename)
+
+    plt.savefig(path)
+
     # Mostra il grafico
     plt.show()
 #%%
-def plot_feature_importance(model, pca, X):
-    importances = model.feature_importances_
-    pca_loadings = pca.components_
+def plot_feature_importance(model, X, model_name):
+    feature_importance = model.feature_importances_
 
-    # The importance of each feature is the sum of the absolute values of its loadings across all components
-    feature_importance = np.sum(np.abs(pca_loadings), axis=0)
-
-    # Step 8: Sort the feature importances in descending order
+    # Sort the feature importances in descending order
     sorted_idx = np.argsort(feature_importance)[::-1]
 
     top_sorted_idx = sorted_idx[:28]
 
-    # Step 10: Plot the top 28 feature importances based on original feature names
+    # Plot the top 28 feature importances based on original feature names
     plt.figure(figsize=(12, 6))
     plt.bar(range(28), feature_importance[top_sorted_idx])
     plt.title(f'Top {28} Feature Importance')
     plt.xlabel('Feature')
     plt.ylabel('Importance')
     plt.xticks(range(28), np.array(X.columns)[top_sorted_idx], rotation=90)  # If X is a DataFrame
+
+    folder = 'images'
+    if not os.path.exists(folder):  # Se la cartella non esiste, la crea
+        os.makedirs(folder)
+
+    filename = 'feature_importance' + model_name + '.png'
+
+    path = os.path.join(folder, filename)
+
+    plt.savefig(path)
+
+    # Mostra il grafico
+    plt.show()
+
+
+def analyze_rf_model(X_train_copy, X_test_copy, class_names, model_name):
+    # Carica il modello RandomForest
+    best_rf_model_path = '../models/best_rf_model.pkl'
+    best_rf_model = pickle.load(open(best_rf_model_path, 'rb'))
+
+    # Traccia l'importanza delle caratteristiche
+    plot_feature_importance(best_rf_model, pd.DataFrame(X_test_copy), model_name)
+
+    # Calcolare i valori SHAP per i dati di test
+    explainer = shap.TreeExplainer(best_rf_model, X_train_copy)
+    shap_values = explainer.shap_values(pd.DataFrame(X_test_copy), check_additivity=False)
+
+    # Traccia i grafici di SHAP per ciascuna classe
+    for i, class_name in enumerate(class_names):
+        shap.summary_plot(shap_values[i], pd.DataFrame(X_test_copy).values, plot_type='bar',
+                          class_names=class_names, feature_names=pd.DataFrame(X_test_copy).columns.tolist())
+
+    folder = 'images'
+    if not os.path.exists(folder):  # Se la cartella non esiste, la crea
+        os.makedirs(folder)
+
+    filename = 'shap_feature_importance' + model_name + '.png'
+
+    path = os.path.join(folder, filename)
+
+    plt.savefig(path)
+
+    # Mostra il grafico
+
+    # Mostra i grafici
     plt.show()
