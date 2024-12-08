@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import os
 import pickle
+import joblib
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
@@ -55,7 +56,7 @@ def plot_feature_importance(model, X, model_name):
     if not os.path.exists(folder):  # Se la cartella non esiste, la crea
         os.makedirs(folder)
 
-    filename = 'feature_importance' + model_name + '.png'
+    filename = 'feature_importance_' + model_name + '.png'
 
     path = os.path.join(folder, filename)
 
@@ -67,32 +68,19 @@ def plot_feature_importance(model, X, model_name):
 
 def analyze_rf_model(X_train_copy, X_test_copy, class_names, model_name):
     # Carica il modello RandomForest
-    best_rf_model_path = '../models/best_rf_model.pkl'
-    best_rf_model = pickle.load(open(best_rf_model_path, 'rb'))
+    if (model_name == 'randomForest_smartLending'):
+        best_rf_model_path = 'models/smartLending/best_xgb_model.pkl'
+    else:
+        best_rf_model_path = 'models/creditRisk/best_rf_model.pkl'
+    best_rf_model = joblib.load(open(best_rf_model_path, 'rb'))
 
     # Traccia l'importanza delle caratteristiche
     plot_feature_importance(best_rf_model, pd.DataFrame(X_test_copy), model_name)
 
-    # Calcolare i valori SHAP per i dati di test
-    explainer = shap.TreeExplainer(best_rf_model, X_train_copy)
-    shap_values = explainer.shap_values(pd.DataFrame(X_test_copy), check_additivity=False)
+    # Calcolare i valori SHAP
+    explainer = shap.TreeExplainer(best_rf_model, pd.DataFrame(X_train_copy))
+    shap_values = explainer(pd.DataFrame(X_test_copy), check_additivity=False)
 
     # Traccia i grafici di SHAP per ciascuna classe
-    for i, class_name in enumerate(class_names):
-        shap.summary_plot(shap_values[i], pd.DataFrame(X_test_copy).values, plot_type='bar',
-                          class_names=class_names, feature_names=pd.DataFrame(X_test_copy).columns.tolist())
-
-    folder = 'images'
-    if not os.path.exists(folder):  # Se la cartella non esiste, la crea
-        os.makedirs(folder)
-
-    filename = 'shap_feature_importance' + model_name + '.png'
-
-    path = os.path.join(folder, filename)
-
-    plt.savefig(path)
-
-    # Mostra il grafico
-
-    # Mostra i grafici
-    plt.show()
+    shap.summary_plot(shap_values, pd.DataFrame(X_test_copy).values, plot_type='bar',
+                      class_names=class_names, feature_names=pd.DataFrame(X_test_copy).columns.tolist())

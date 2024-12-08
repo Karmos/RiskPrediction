@@ -44,9 +44,11 @@ def main():
 
     # Remove rows with pymnt_plan = 'y'
     df = df[df['pymnt_plan'] != 'y']
-    df.drop(columns=['pymnt_plan', 'policy_code'], inplace=True)
+    df.drop(columns=['pymnt_plan', 'policy_code', 'grade'], inplace=True)
 
-    plot_emp_length_vs_loan_status(df)
+    df = plot_emp_length_vs_loan_status(df)
+
+    df.drop(columns=['emp_length'], inplace=True)
 
     plot_feature_distributions(df)
 
@@ -70,7 +72,7 @@ def main():
     #encoding
     df = sub_grades_encoding(df)
 
-    df = encode_data(df)
+    df = encode_data(df) #QUI IL PROBLEMA
 
     df = process_loan_status(df)
 
@@ -90,7 +92,7 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
     # Scaling
-    scale_data(X_train, X_test, X);
+    X_train, X_test = scale_data(X_train, X_test, X);
 
     # Bilanciamento
     undSampler = RandomUnderSampler(sampling_strategy='auto', random_state=42)
@@ -102,17 +104,18 @@ def main():
 
     X_train_copy = X_train
     X_test_copy = X_test
-    X_train, X_test, components_to_retain = pca_analysis(X_train, X_test, 0.9)
 
+    X_train, X_test = pca_analysis(X_train, X_test, 0.9)
+    
     # Step 4: Train the model
 
     # --- SVM ---
     svm = SVC(random_state=42)
-    param_grid = {"C": [1, 10], "kernel": ["linear", "rbf"]}
-    best_svm_model, grid_results = train_with_grid_search(svm, param_grid, X_train, y_train)
-    metrics = evaluate_model(best_svm_model, X_test, y_test)
-    save_grid_search_results(grid_results,
-                             ['param_C', 'param_kernel', 'mean_test_score', 'std_test_score', 'rank_test_score'],
+    param_grid = {"C": [1], "kernel": ["linear", "rbf"]}
+    best_svm_model, cv_results = train_with_grid_search(svm, param_grid, X_train, y_train)
+    results = evaluate_model(best_svm_model, cv_results, X_test, y_test)
+    save_grid_search_results(results,
+                             ['param_C', 'param_kernel', 'mean_test_score', 'std_test_score', 'rank_test_score', 'precision', 'recall', 'f1_score', 'accuracy'],
                              'results/smartLending/svm_results.csv')
     save_model(best_svm_model, 'models/smartLending/best_svm_model.pkl')
     y_pred_svm = best_svm_model.predict(X_test)
@@ -123,10 +126,10 @@ def main():
     # --- Logistic Regression ---
     lr = LogisticRegression(random_state=42, max_iter=500)
     param_grid = {"penalty": ["l2"], "C": [0.1, 1, 10], "solver": ["lbfgs", "liblinear"]}
-    best_lr_model, grid_results = train_with_grid_search(lr, param_grid, X_train, y_train)
-    metrics = evaluate_model(best_lr_model, X_test, y_test)
-    save_grid_search_results(grid_results,
-                             ['param_penalty', 'param_C', 'param_solver', 'mean_test_score', 'std_test_score'],
+    best_lr_model, cv_results = train_with_grid_search(lr, param_grid, X_train, y_train)
+    results = evaluate_model(best_lr_model, cv_results, X_test, y_test)
+    save_grid_search_results(results,
+                             ['param_penalty', 'param_C', 'param_solver', 'mean_test_score', 'std_test_score', 'rank_test_score', 'precision', 'recall', 'f1_score', 'accuracy'],
                              'results/smartLending/lr_results.csv')
     save_model(best_lr_model, 'models/smartLending/best_lr_model.pkl')
     y_pred_lr = best_lr_model.predict(X_test)
@@ -137,9 +140,9 @@ def main():
     # --- Random Forest ---
     rf = RandomForestClassifier(random_state=42)
     param_grid = {"n_estimators": [100, 200], "max_depth": [5, 7], "min_samples_leaf": [1, 2]}
-    best_rf_model, grid_results = train_with_grid_search(rf, param_grid, X_train, y_train)
-    metrics = evaluate_model(best_rf_model, X_test, y_test)
-    save_grid_search_results(grid_results, ['param_n_estimators', 'param_max_depth', 'param_min_samples_leaf', 'mean_test_score', 'std_test_score'], 'results/smartLending/rf_results.csv')
+    best_rf_model, cv_results = train_with_grid_search(rf, param_grid, X_train, y_train)
+    results = evaluate_model(best_rf_model, cv_results, X_test, y_test)
+    save_grid_search_results(results, ['param_n_estimators', 'param_max_depth', 'param_min_samples_leaf', 'mean_test_score', 'std_test_score', 'rank_test_score', 'precision', 'recall', 'f1_score', 'accuracy'], 'results/smartLending/rf_results.csv')
     save_model(best_rf_model, 'models/smartLending/best_rf_model.pkl')
     y_pred_rf = best_rf_model.predict(X_test)
     plot_confusion_matrix(y_test, y_pred_rf, 'randomForest_smartLending')
@@ -154,11 +157,11 @@ def main():
         "max_depth": [3, 5],
         "subsample": [0.8, 1.0],
     }
-    best_xgb_model, grid_results = train_with_grid_search(xgb, param_grid, X_train, y_train)
-    metrics = evaluate_model(best_xgb_model, X_test, y_test)
-    save_grid_search_results(grid_results,
+    best_xgb_model, cv_results = train_with_grid_search(xgb, param_grid, X_train, y_train)
+    results = evaluate_model(best_xgb_model, cv_results, X_test, y_test)
+    save_grid_search_results(results,
                              ["param_n_estimators", "param_learning_rate", "param_max_depth", "param_subsample",
-                              "mean_test_score", "std_test_score", "rank_test_score"], "results/smartLending/xgb_results.csv")
+                              "mean_test_score", "std_test_score", "rank_test_score", 'precision', 'recall', 'f1_score', 'accuracy'], "results/smartLending/xgb_results.csv")
     save_model(best_xgb_model, "models/smartLending/best_xgb_model.pkl")
     y_pred_xgb = best_xgb_model.predict(X_test)
     plot_confusion_matrix(y_test, y_pred_xgb, 'XGBoost_smartLending')

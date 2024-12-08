@@ -3,6 +3,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
+from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -34,7 +35,8 @@ def transform_skewed_features(df, threshold=0.5):
             df[feature], lambda_val = stats.boxcox(df[feature])
             print(f"Box-Cox applied to {feature} with lambda = {lambda_val:.4f}")
         else:
-            print(f"Skipping {feature} as it contains non-positive values.")
+            pass
+            #print(f"Skipping {feature} as it contains non-positive values.")
 
     return df
 
@@ -51,9 +53,7 @@ def imputing(df):
     return imputed_df
 
 
-def encode_data(df, ):
-    """Function to split data into features and target."""
-    from sklearn.preprocessing import LabelEncoder
+def encode_data(df):
 
     label_encoder = LabelEncoder()
     df['term'] = label_encoder.fit_transform(df['term'])
@@ -175,13 +175,13 @@ def pca_analysis(X_train, X_test, variance_threshold=0.9):
     # Determinare il numero di componenti principali da mantenere in base alla soglia di varianza
     components_to_retain = np.argmax(cumulative_variance >= variance_threshold) + 1
 
+    print(components_to_retain)
+
     # Esegui la PCA con il numero di componenti scelto
     pca = PCA(n_components=components_to_retain)
 
-    X_train_copy = X_train.copy()  # Per eventuale riferimento futuro
     X_train_reduced = pca.fit_transform(X_train)
 
-    X_test_copy = X_test.copy()  # Per eventuale riferimento futuro
     X_test_reduced = pca.transform(X_test)
 
-    return X_train_reduced, X_test_reduced, components_to_retain
+    return X_train_reduced, X_test_reduced

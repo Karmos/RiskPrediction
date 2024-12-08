@@ -112,40 +112,6 @@ def group_emp_length(emp_length):
     else:
         return '>8'
 
-
-def grade(df):
-    grades = sorted(df['grade'].unique())
-    print("Possible grades: ", grades)
-    sub_grades = sorted(df['sub_grade'].unique())
-    print("Possible subgrades: ", sub_grades)
-    df.drop(columns=['grade'], inplace=True)
-    emp_length_groups = ['<1', '1-4', '5-8', '>8']
-
-    # Create a copy of the DataFrame to avoid modifying the original
-    df_copy = df.copy()
-
-    # Apply the grouping function to create a new column in df_copy
-    df_copy['emp_length_group'] = df_copy['emp_length'].apply(group_emp_length)
-
-    # Convert the new 'emp_length_group' column to a categorical type with the specified order
-    df_copy['emp_length_group'] = pd.Categorical(df_copy['emp_length_group'], categories=emp_length_groups,
-                                                 ordered=True)
-
-    # Set up the figure
-    plt.figure(figsize=(10, 6))
-
-    # Create the stacked histogram with the grouped emp_length data
-    sns.histplot(data=df_copy, x="emp_length_group", hue="loan_status", multiple="stack", palette='bright')
-
-    # Add title and axis labels
-    plt.title("Relationship between Employment Length and Loan Status")
-    plt.xlabel("Employment Length")
-    plt.ylabel("Count")
-
-    # Show the plot
-    plt.show()
-
-
 def plot_feature_distributions(df):
     """
     Funzione che seleziona le caratteristiche con più di 2 valori unici
@@ -478,3 +444,5 @@ def plot_emp_length_vs_loan_status(df):
     plt.savefig(path)
 
     plt.show()
+
+    return df
